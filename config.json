@@ -1,0 +1,146 @@
+{
+  "brand": {
+    "name": "SnapPro",
+    "tagline": "The Evolution of Cinematic Sound",
+    "bg": "#0A0240",
+    "accent": "#00B8FF",
+    "accent2": "#7933F5"
+  },
+  "event": {
+    "durationMin": 240,
+    "demoCompressMin": 0,
+    "_comment": "durationMin = real event length. Set demoCompressMin > 0 (e.g. 5) to squeeze all golden-ticket prizes into a few minutes for testing."
+  },
+  "prizes": [
+    {
+      "id": "grand1",
+      "name": "Sonos Era 300 Speaker",
+      "tier": "grand",
+      "total": 1,
+      "icon": "🔊",
+      "image": "/photos/prize_speaker.jpg"
+    },
+    {
+      "id": "grand2",
+      "name": "Amazon Echo Show",
+      "tier": "grand",
+      "total": 1,
+      "icon": "📺",
+      "image": "/photos/prize_display.jpg"
+    },
+    {
+      "id": "grand3",
+      "name": "JBL Flip Speaker",
+      "tier": "grand",
+      "total": 1,
+      "icon": "🎵",
+      "image": "/photos/prize_portable.jpg"
+    },
+    {
+      "id": "mid1",
+      "name": "Smart LED Light Kit",
+      "tier": "mid",
+      "total": 20,
+      "icon": "💡",
+      "image": "/photos/prize_led.jpg"
+    },
+    {
+      "id": "mid2",
+      "name": "$25 Gift Card",
+      "tier": "mid",
+      "total": 30,
+      "icon": "💳",
+      "image": "/photos/prize_gift.jpg"
+    },
+    {
+      "id": "base1",
+      "name": "SnapPro Sticker Pack",
+      "tier": "base",
+      "total": 100000,
+      "icon": "✨",
+      "weight": 3
+    },
+    {
+      "id": "base2",
+      "name": "SnapPro Marker",
+      "tier": "base",
+      "total": 100000,
+      "icon": "🖊️",
+      "weight": 2
+    },
+    {
+      "id": "base3",
+      "name": "SnapPro Tote Bag",
+      "tier": "base",
+      "total": 100000,
+      "icon": "👜",
+      "weight": 1
+    },
+    {
+      "id": "base4",
+      "name": "$100 Off a Consultation",
+      "tier": "base",
+      "total": 100000,
+      "icon": "🎟️",
+      "weight": 2
+    }
+  ],
+  "quiz": [
+    {
+      "q": "When did synchronized sound first arrive in feature films?",
+      "options": [
+        "1912",
+        "1927",
+        "1939",
+        "1955"
+      ],
+      "answer": 1,
+      "image": "/photos/q1.jpg"
+    },
+    {
+      "q": "In the silent era, how was a film usually scored in the theater?",
+      "options": [
+        "Live musicians",
+        "Cassette tape",
+        "Streaming",
+        "It was totally silent"
+      ],
+      "answer": 0,
+      "image": "/photos/q2.jpg"
+    },
+    {
+      "q": "Which brand became synonymous with cinema surround sound in the 1970s-80s?",
+      "options": [
+        "Dolby",
+        "Kodak",
+        "Bluetooth",
+        "Wi-Fi"
+      ],
+      "answer": 0,
+      "image": "/photos/q3.jpg"
+    },
+    {
+      "q": "What do we call audio that places sounds overhead and all around you?",
+      "options": [
+        "Mono",
+        "AM radio",
+        "Object-based / immersive audio",
+        "Lo-fi"
+      ],
+      "answer": 2,
+      "image": "/photos/q4.jpg"
+    },
+    {
+      "q": "What does SnapPro deliver for your home or business?",
+      "options": [
+        "The cheapest gear",
+        "Light & sound, mastered",
+        "DIY kits only",
+        "Used equipment"
+      ],
+      "answer": 1,
+      "image": "/photos/q5.jpg"
+    }
+  ],
+  "adminKey": "snappro-admin"
+}

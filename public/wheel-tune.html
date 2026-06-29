@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Needle Tuner</title>
+    <style>
+      :root { --gold:#ffa33f; --accent:#00b8ff; }
+      * { box-sizing:border-box; }
+      body { margin:0; min-height:100vh; background:#0a0240; color:#f2f2f2; font-family:system-ui,sans-serif; display:flex; flex-direction:column; align-items:center; padding:16px; }
+      h1 { font-size:18px; margin:2px 0; }
+      .sub { color:rgba(255,255,255,.6); font-size:12px; text-align:center; max-width:520px; margin-bottom:6px; }
+      .wheelwrap { position:relative; width:300px; height:300px; margin:8px auto; }
+      .pointer { position:absolute; top:-12px; left:50%; transform:translateX(-50%); z-index:4; transform-origin:50% 2px; will-change:transform;
+        width:0; height:0; border-left:13px solid transparent; border-right:13px solid transparent; border-top:30px solid var(--gold); filter:drop-shadow(0 3px 4px rgba(0,0,0,.55)); }
+      .wheel { width:100%; height:100%; border-radius:50%; position:relative; border:8px solid rgba(255,255,255,.92); box-shadow:0 16px 50px rgba(0,0,0,.5); }
+      .seg { position:absolute; inset:0; }
+      .seg span { position:absolute; left:50%; top:13%; transform:translateX(-50%); font-size:22px; }
+      .peg { position:absolute; left:50%; top:50%; width:6px; height:15px; margin:-7.5px 0 0 -3px; border-radius:3px; background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.2); z-index:2; }
+      .peg.zero { background:#ff5a5a; }
+      .hub { position:absolute; top:50%; left:50%; width:48px; height:48px; transform:translate(-50%,-50%); z-index:3; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; }
+      .panel { width:100%; max-width:520px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:14px; margin-top:8px; }
+      label { display:block; font-size:12px; color:rgba(255,255,255,.7); margin:10px 0 4px; }
+      input[type=range] { width:100%; }
+      .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+      button { padding:11px 14px; border:1px solid rgba(255,255,255,.2); border-radius:10px; background:rgba(255,255,255,.08); color:#fff; font-size:13px; font-weight:600; cursor:pointer; }
+      button.on { background:linear-gradient(90deg,var(--accent),#7933f5); border:0; }
+      .read { font-family:ui-monospace,monospace; font-size:12px; color:var(--gold); margin-top:12px; white-space:pre-line; line-height:1.5; }
+    </style>
+  </head>
+  <body>
+    <h1>Needle Tuner</h1>
+    <div class="sub">Drag <b>Wheel angle</b> slowly and watch the needle vs the pegs (the RED peg is peg&nbsp;0). Flip the toggles until it looks locked-on, then read me the bottom numbers.</div>
+    <div class="wheelwrap">
+      <div class="pointer" id="pointer"></div>
+      <div class="wheel" id="wheel"></div>
+      <div class="hub">🎬</div>
+    </div>
+    <div class="panel">
+      <label>Wheel angle: <span id="angv">0</span>°</label>
+      <input type="range" id="ang" min="0" max="360" value="0" step="0.5" />
+      <label>Max bend (how far the needle rides the peg): <span id="mbv">14</span>°</label>
+      <input type="range" id="mb" min="2" max="42" value="14" step="1" />
+      <div class="row">
+        <button id="dir" class="on">Needle bends: WITH peg (+s)</button>
+        <button id="play">▶ slow auto-spin</button>
+      </div>
+      <div class="read" id="read"></div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const SEGN = 8, SEGA = 360 / SEGN;
+      const ICONS = ["🏆", "💡", "✨", "🔊", "👜", "💳", "🎟️", "🎵"];
+      (function build() {
+        const cols = ["#2a1f8f", "#1a1060"];
+        const stops = ICONS.map((_, i) => `${i === 0 ? "#ffa33f" : cols[i % 2]} ${i * SEGA}deg ${(i + 1) * SEGA}deg`).join(",");
+        const w = $("wheel");
+        w.style.background = `conic-gradient(${stops})`;
+        const segs = ICONS.map((ic, i) => `<div class="seg" style="transform:rotate(${i * SEGA + SEGA / 2}deg)"><span>${ic}</span></div>`).join("");
+        const pegs = ICONS.map((_, i) => `<div class="peg ${i === 0 ? "zero" : ""}" style="transform:rotate(${i * SEGA}deg) translateY(-142px)"></div>`).join("");
+        w.innerHTML = segs + pegs;
+      })();
+
+      let angle = 0, DIR = 1, MAXBEND = 14;
+      function render() {
+        const s = ((angle % SEGA) + SEGA) % SEGA;
+        // pure function of angle so you can scrub it: needle clings while a peg is within MAXBEND, else rests
+        let flap = 0;
+        if (s <= MAXBEND) flap = DIR * s;
+        else if (s <= MAXBEND + 6) flap = DIR * MAXBEND * (1 - (s - MAXBEND) / 6); // quick snap-back shown
+        $("wheel").style.transform = `rotate(${angle}deg)`;
+        $("pointer").style.transform = `translateX(-50%) rotate(${flap.toFixed(2)}deg)`;
+        const peg0 = ((0 + angle) % 360 + 360) % 360; // peg 0 screen angle from top, clockwise
+        $("read").textContent =
+          `angle = ${angle.toFixed(1)}°\n` +
+          `s (pos within slot) = ${s.toFixed(1)}°\n` +
+          `peg 0 is ${peg0.toFixed(1)}° clockwise from top\n` +
+          `needle flap = ${flap.toFixed(1)}°   (DIR=${DIR}, MAXBEND=${MAXBEND})`;
+      }
+      $("ang").oninput = (e) => { angle = +e.target.value; $("angv").textContent = angle.toFixed(1); render(); };
+      $("mb").oninput = (e) => { MAXBEND = +e.target.value; $("mbv").textContent = MAXBEND; render(); };
+      $("dir").onclick = () => { DIR = -DIR; $("dir").textContent = "Needle bends: " + (DIR > 0 ? "WITH peg (+s)" : "AGAINST peg (−s)"); render(); };
+      let timer = null;
+      $("play").onclick = () => {
+        if (timer) { clearInterval(timer); timer = null; $("play").classList.remove("on"); $("play").textContent = "▶ slow auto-spin"; return; }
+        $("play").classList.add("on"); $("play").textContent = "⏸ stop";
+        timer = setInterval(() => { angle = (angle + 1.2) % 360; $("ang").value = angle; $("angv").textContent = angle.toFixed(1); render(); }, 28);
+      };
+      render();
+    </script>
+  </body>
+</html>

@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SnapPro · Game Admin</title>
+    <style>
+      :root { --bg:#0a0240; --accent:#00b8ff; --accent2:#7933f5; --gold:#ffa33f; }
+      * { box-sizing: border-box; }
+      body { margin:0; font-family: system-ui, sans-serif; background:#0a0240; color:#f2f2f2; padding:20px; }
+      h1 { font-size:22px; margin:0 0 4px; }
+      .sub { color:rgba(255,255,255,.55); font-size:13px; margin-bottom:18px; }
+      .grid { display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:22px; }
+      .stat { background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:16px; }
+      .stat .k { font-size:12px; color:rgba(255,255,255,.6); text-transform:uppercase; letter-spacing:.08em; }
+      .stat .v { font-size:30px; font-weight:700; margin-top:4px; }
+      .panel { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:16px; margin-bottom:18px; }
+      .panel h2 { font-size:14px; text-transform:uppercase; letter-spacing:.08em; color:rgba(255,255,255,.7); margin:0 0 12px; }
+      .prow { display:flex; align-items:center; gap:10px; margin-bottom:10px; }
+      .prow .nm { width:200px; font-size:14px; }
+      .bar { flex:1; height:10px; border-radius:6px; background:rgba(255,255,255,.12); overflow:hidden; }
+      .bar > div { height:100%; }
+      .cnt { width:90px; text-align:right; font-variant-numeric:tabular-nums; font-size:13px; color:rgba(255,255,255,.8); }
+      .tier-grand>div{background:var(--gold)} .tier-mid>div{background:var(--accent2)} .tier-base>div{background:var(--accent)}
+      table { width:100%; border-collapse:collapse; font-size:13px; }
+      th,td { text-align:left; padding:8px 10px; border-bottom:1px solid rgba(255,255,255,.08); }
+      th { color:rgba(255,255,255,.55); font-weight:600; text-transform:uppercase; font-size:11px; letter-spacing:.06em; }
+      .pill { padding:2px 8px; border-radius:20px; font-size:11px; }
+      .pill.grand{background:rgba(255,163,63,.2);color:var(--gold)} .pill.mid{background:rgba(121,51,245,.25);color:#c4a6ff} .pill.base{background:rgba(0,184,255,.18);color:var(--accent)}
+      input { padding:11px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.06); color:#fff; font-size:16px; text-transform:uppercase; }
+      button { padding:11px 16px; border:0; border-radius:10px; background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#fff; font-weight:700; cursor:pointer; font-size:14px; }
+      a.btn { display:inline-block; text-decoration:none; padding:11px 16px; border-radius:10px; background:rgba(255,255,255,.1); color:#fff; font-size:14px; }
+      #redeem-out { margin-top:10px; font-size:15px; }
+      .ok{color:#7CFFB0} .warn{color:var(--gold)} .bad{color:#ff8a8a}
+    </style>
+  </head>
+  <body>
+    <h1>SnapPro · Sound-in-Film — Live Dashboard</h1>
+    <div class="sub" id="meta">loading…</div>
+
+    <div class="grid" id="stats"></div>
+
+    <div class="panel">
+      <h2>Redeem a prize</h2>
+      <div style="display:flex; gap:10px; flex-wrap:wrap;">
+        <input id="rcode" placeholder="SP-XXXX" />
+        <button onclick="redeem()">Mark redeemed</button>
+        <a class="btn" id="csv" href="#">⬇ Export leads CSV</a>
+      </div>
+      <div id="redeem-out"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Prize inventory</h2>
+      <div id="prizes"></div>
+    </div>
+
+    <div class="panel">
+      <h2>Recent entries</h2>
+      <table><thead><tr><th>Time</th><th>Name</th><th>Email</th><th>Interest</th><th>Role</th><th>Prize</th><th>Code</th><th></th></tr></thead><tbody id="rows"></tbody></table>
+    </div>
+
+    <script>
+      const KEY = new URLSearchParams(location.search).get("key") || "";
+      const $ = (id) => document.getElementById(id);
+      $("csv").href = "/api/admin/export?key=" + encodeURIComponent(KEY);
+
+      async function load() {
+        const r = await fetch("/api/admin/stats?key=" + encodeURIComponent(KEY));
+        if (!r.ok) { $("meta").textContent = "⛔ Bad admin key. Add ?key=… to the URL."; return; }
+        const d = await r.json();
+        const mins = Math.round(d.durationMs / 60000);
+        $("meta").textContent = `Seeded ${new Date(d.seededAt).toLocaleString()} · prizes paced over ${mins} min`;
+        $("stats").innerHTML = `
+          <div class="stat"><div class="k">Total leads</div><div class="v">${d.totalLeads}</div></div>
+          <div class="stat"><div class="k">Prizes redeemed</div><div class="v">${d.redeemed}</div></div>
+          <div class="stat"><div class="k">Grand left</div><div class="v">${d.prizes.filter(p=>p.tier==='grand').reduce((n,p)=>n+p.remaining,0)}</div></div>
+          <div class="stat"><div class="k">Mid left</div><div class="v">${d.prizes.filter(p=>p.tier==='mid').reduce((n,p)=>n+p.remaining,0)}</div></div>`;
+        $("prizes").innerHTML = d.prizes.map((p) => {
+          const tot = p.total >= 100000 ? p.awarded + " given" : `${p.remaining}/${p.total}`;
+          const pct = p.total >= 100000 ? 100 : (p.remaining / p.total) * 100;
+          return `<div class="prow"><div class="nm">${p.icon} ${p.name}</div><div class="bar tier-${p.tier}"><div style="width:${pct}%"></div></div><div class="cnt">${tot}</div></div>`;
+        }).join("");
+        $("rows").innerHTML = d.recent.map((l) => `
+          <tr><td>${new Date(l.playedAt).toLocaleTimeString()}</td><td>${l.name||"—"}</td><td>${l.email}</td>
+          <td>${l.interest||"—"}</td><td>${l.role||"—"}</td>
+          <td><span class="pill ${l.prizeTier}">${l.prizeName}</span></td><td>${l.code}</td>
+          <td>${l.redeemed?"✅":""}</td></tr>`).join("");
+      }
+
+      async function redeem() {
+        const code = $("rcode").value.trim().toUpperCase();
+        if (!code) return;
+        const r = await fetch("/api/admin/redeem?key=" + encodeURIComponent(KEY), {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ code }) });
+        const d = await r.json();
+        const out = $("redeem-out");
+        if (!r.ok) out.innerHTML = `<span class="bad">✗ ${d.error}</span>`;
+        else if (d.already) out.innerHTML = `<span class="warn">⚠ Already redeemed: ${d.name} — ${d.prizeName}</span>`;
+        else out.innerHTML = `<span class="ok">✓ ${d.name} — give them: <b>${d.prizeName}</b></span>`;
+        $("rcode").value = "";
+        load();
+      }
+
+      load();
+      setInterval(load, 5000);
+    </script>
+  </body>
+</html>

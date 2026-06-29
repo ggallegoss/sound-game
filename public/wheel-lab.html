@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wheel Lab · pick a stop style</title>
+    <style>
+      @font-face { font-family: "Moderniz"; src: url("/fonts/Moderniz.otf"); }
+      :root { --bg:#0a0240; --accent:#00b8ff; --accent2:#7933f5; --gold:#ffa33f; }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      body { margin:0; min-height:100vh; background:
+        radial-gradient(ellipse 80% 60% at 50% 0%, #2a1f8f 0%, transparent 60%), var(--bg);
+        color:#f2f2f2; font-family: system-ui, sans-serif; display:flex; flex-direction:column; align-items:center; padding:18px; }
+      h1 { font-family:"Moderniz",sans-serif; font-size:20px; letter-spacing:-.02em; margin:4px 0 2px; }
+      .sub { color:rgba(255,255,255,.6); font-size:13px; margin-bottom:6px; text-align:center; }
+      .now { font-family:"Moderniz",sans-serif; font-size:18px; color:var(--gold); height:26px; margin:6px 0 2px; }
+      .wheelwrap { position:relative; width:300px; height:300px; margin:6px auto 4px; }
+      .pointer { position:absolute; top:-10px; left:50%; transform:translateX(-50%); z-index:4;
+        transform-origin:50% 2px; will-change:transform;
+        width:0; height:0; border-left:13px solid transparent; border-right:13px solid transparent; border-top:28px solid var(--gold); filter:drop-shadow(0 3px 4px rgba(0,0,0,.55)); }
+      .wheel { width:100%; height:100%; border-radius:50%; position:relative; border:8px solid rgba(255,255,255,.92);
+        box-shadow:0 16px 50px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.2); will-change:transform; }
+      .seg { position:absolute; inset:0; }
+      .seg span { position:absolute; left:50%; top:13%; transform:translateX(-50%); font-size:24px; }
+      .peg { position:absolute; left:50%; top:50%; width:5px; height:13px; margin:-6.5px 0 0 -2.5px; border-radius:3px; background:rgba(255,255,255,.92); box-shadow:0 0 0 1px rgba(0,0,0,.18); z-index:2; }
+      .hub { position:absolute; top:50%; left:50%; width:50px; height:50px; transform:translate(-50%,-50%); z-index:3; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:18px; }
+      .grid { display:grid; grid-template-columns:repeat(3,1fr); gap:9px; width:100%; max-width:520px; margin-top:8px; }
+      button { padding:13px 8px; border:1px solid rgba(255,255,255,.18); border-radius:12px; background:rgba(255,255,255,.07); color:#fff; font-size:13px; font-weight:600; cursor:pointer; line-height:1.25; }
+      button:active { transform:scale(.98); }
+      button .k { display:block; font-family:"Moderniz",sans-serif; font-size:12px; color:var(--accent); margin-bottom:3px; }
+      .respin { max-width:520px; width:100%; margin-top:10px; background:linear-gradient(90deg,var(--accent),var(--accent2)); border:0; padding:14px; font-size:15px; font-family:"Moderniz",sans-serif; }
+      .tip { color:rgba(255,255,255,.5); font-size:12px; margin-top:12px; text-align:center; max-width:520px; }
+    </style>
+  </head>
+  <body>
+    <h1>Wheel Lab</h1>
+    <div class="sub">It's spinning. Tap a style to see how it stops on the gold slot. Note the number you like.</div>
+    <div class="now" id="now">spinning…</div>
+    <div class="wheelwrap">
+      <div class="pointer" id="pointer"></div>
+      <div class="wheel" id="wheel"></div>
+      <div class="hub">🎬</div>
+    </div>
+    <button class="respin" id="respin">↻ Spin it back up</button>
+    <div class="grid" id="grid"></div>
+    <div class="tip">All of them land on the gold slot — you're judging how the *stop* feels. Tell me the winning number and I'll put it in the game.</div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const SEGN = 8, SEGA = 360 / SEGN, WINNER = 0;
+      const ICONS = ["🏆", "💡", "✨", "🔊", "👜", "💳", "🎟️", "🎵"];
+
+      // build wheel
+      (function build() {
+        const colors = ["#2a1f8f", "#1a1060"];
+        const stops = ICONS.map((_, i) => {
+          const c = i === WINNER ? "#ffa33f" : colors[i % 2];
+          return `${c} ${i * SEGA}deg ${(i + 1) * SEGA}deg`;
+        }).join(",");
+        const w = $("wheel");
+        w.style.background = `conic-gradient(${stops})`;
+        const segs = ICONS.map((ic, i) => `<div class="seg" style="transform:rotate(${i * SEGA + SEGA / 2}deg)"><span>${ic}</span></div>`).join("");
+        const pegs = ICONS.map((_, i) => `<div class="peg" style="transform:rotate(${i * SEGA}deg) translateY(-142px)"></div>`).join("");
+        w.innerHTML = segs + pegs;
+      })();
+
+      // ---- engine ----
+      let angle = 0, mode = "idle", rafId = null, stepFn = null;
+      let flap = 0, flapV = 0, lastB = 0;
+      const KICK = 14, SPEED = 12;
+      function applyFrame() {
+        const b = Math.floor(angle / SEGA);
+        if (b !== lastB) { flap = KICK; lastB = b; }
+        flapV += (0 - flap) * 0.34; flapV *= 0.55; flap += flapV;
+        $("wheel").style.transform = `rotate(${angle}deg)`;
+        $("pointer").style.transform = `translateX(-50%) rotate(${flap.toFixed(2)}deg)`;
+      }
+      function loop() {
+        if (mode === "idle") { rafId = null; return; }
+        if (mode === "spin") angle += SPEED;
+        else if (mode === "step" && stepFn) stepFn();
+        applyFrame();
+        rafId = requestAnimationFrame(loop);
+      }
+      function ensure() { if (!rafId) loop(); }
+      function spinUp() { mode = "spin"; ensure(); $("now").textContent = "spinning…"; }
+
+      function target(minTurns) {
+        const segCenter = WINNER * SEGA + SEGA / 2;
+        const desiredMod = ((360 - (segCenter % 360)) % 360 + 360) % 360;
+        let t = angle + minTurns * 360;
+        t += (desiredMod - (((t % 360) + 360) % 360) + 360) % 360;
+        return t;
+      }
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+      function tween(to, dur, ease) {
+        return new Promise((res) => {
+          const from = angle, frames = Math.max(1, Math.round(dur / 16.67)); let f = 0;
+          stepFn = () => { f++; const x = Math.min(1, f / frames); angle = from + (to - from) * ease(x); if (x >= 1) { stepFn = null; res(); } };
+          mode = "step"; ensure();
+        });
+      }
+      function friction(to, f) {
+        return new Promise((res) => {
+          let v = (to - angle) * (1 - f);
+          stepFn = () => { angle += v; v *= f; if (Math.abs(v) < 0.03) { angle = to; stepFn = null; res(); } };
+          mode = "step"; ensure();
+        });
+      }
+      // easings
+      const eOutCubic = t => 1 - Math.pow(1 - t, 3);
+      const eOutQuint = t => 1 - Math.pow(1 - t, 5);
+      const hesitate = t => {            // slows near the end then glides in (smooth, no stall)
+        if (t < 0.62) return eOutCubic(t / 0.62) * 0.86;
+        if (t < 0.86) return 0.86 + 0.06 * ((t - 0.62) / 0.24);
+        return 0.92 + 0.08 * eOutCubic((t - 0.86) / 0.14);
+      };
+
+      const VARIANTS = [
+        { k: "1", n: "Smooth glide", run: () => tween(target(5), 3400, eOutCubic) },
+        { k: "2", n: "Long glide", run: () => tween(target(6), 4600, eOutQuint) },
+        { k: "3", n: "Snappy", run: () => tween(target(4), 2100, eOutCubic) },
+        { k: "4", n: "Friction (real)", run: () => friction(target(5), 0.982) },
+        { k: "5", n: "Heavy friction", run: () => friction(target(6), 0.99) },
+        { k: "6", n: "Overshoot + settle", run: async () => { const t = target(5); await tween(t + 7, 3000, eOutCubic); await tween(t, 520, eOutCubic); } },
+        { k: "7", n: "Backspin onto it", run: async () => { const t = target(5); await tween(t + SEGA * 0.5, 3100, eOutCubic); await tween(t, 700, eOutCubic); } },
+        { k: "8", n: "Hesitate (smooth)", run: () => tween(target(5), 4200, hesitate) },
+        { k: "9", n: "Two-stage crawl", run: async () => { const t = target(5); await tween(t - SEGA * 0.85, 1700, eOutCubic); await friction(t, 0.95); } },
+      ];
+
+      // build buttons
+      $("grid").innerHTML = VARIANTS.map((v) => `<button data-k="${v.k}"><span class="k">#${v.k}</span>${v.n}</button>`).join("");
+      let busy = false;
+      async function play(v) {
+        if (busy) return; busy = true;
+        $("now").textContent = `#${v.k} — ${v.n}`;
+        if (mode !== "spin") { spinUp(); await wait(650); }
+        await v.run();
+        mode = "idle";
+        $("now").textContent = `#${v.k} — ${v.n}  ✓`;
+        busy = false;
+      }
+      $("grid").querySelectorAll("button").forEach((b) => {
+        b.onclick = () => { const v = VARIANTS.find((x) => x.k === b.dataset.k); if (v) play(v); };
+      });
+      $("respin").onclick = () => { if (!busy) spinUp(); };
+
+      spinUp(); // start spinning on load
+    </script>
+  </body>
+</html>

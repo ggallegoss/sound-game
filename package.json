@@ -1,0 +1,12 @@
+{
+  "name": "snappro-sound-game",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "SnapPro Sound-in-Film lead-capture game (quiz + spin-to-win).",
+  "engines": { "node": ">=18" },
+  "scripts": {
+    "start": "node server.mjs",
+    "test": "node _concurrency_test.mjs 150"
+  }
+}

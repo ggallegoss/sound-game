@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SnapPro · Curator</title>
+    <style>
+      @font-face { font-family: "Moderniz"; src: url("/fonts/Moderniz.otf"); }
+      :root { --accent:#00b8ff; --accent2:#7933f5; --gold:#ffa33f; }
+      * { box-sizing:border-box; }
+      body { margin:0; background:#0a0240; color:#f2f2f2; font-family:system-ui,sans-serif; padding:20px; }
+      h1 { font-family:"Moderniz",sans-serif; font-size:22px; margin:0 0 2px; }
+      .sub { color:rgba(255,255,255,.6); font-size:13px; margin-bottom:18px; }
+      h2 { font-size:14px; text-transform:uppercase; letter-spacing:.08em; color:rgba(255,255,255,.7); margin:24px 0 12px; }
+      .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:18px; }
+      .framer { background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:12px; }
+      .framer .name { font-size:13px; font-weight:700; margin-bottom:8px; }
+      .box { width:100%; aspect-ratio:1/1; border-radius:10px; overflow:hidden; position:relative; background:#0a0628; cursor:grab; touch-action:none; border:1px solid rgba(255,255,255,.14); }
+      .box.drag { cursor:grabbing; }
+      .box img { width:100%; height:100%; object-fit:cover; user-select:none; -webkit-user-drag:none; }
+      .ctl { display:flex; align-items:center; gap:8px; margin-top:8px; font-size:12px; color:rgba(255,255,255,.7); }
+      .ctl input[type=range] { flex:1; }
+      .reset { margin-top:6px; font-size:11px; background:none; border:1px solid rgba(255,255,255,.2); color:rgba(255,255,255,.7); border-radius:8px; padding:5px 8px; cursor:pointer; }
+      .logobar { display:flex; align-items:center; gap:16px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:16px; flex-wrap:wrap; }
+      .logobar .prev { background:#0a0240; border:1px dashed rgba(255,255,255,.18); border-radius:10px; padding:14px 24px; display:flex; align-items:center; justify-content:center; min-width:240px; }
+      .logobar img { display:block; }
+      .logobar .c { flex:1; min-width:220px; }
+      .qr { display:flex; gap:18px; flex-wrap:wrap; align-items:flex-start; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:16px; }
+      .qr img { background:#fff; border-radius:10px; padding:8px; width:220px; height:220px; }
+      input[type=text] { width:100%; padding:10px 12px; border-radius:10px; border:1px solid rgba(255,255,255,.2); background:rgba(255,255,255,.06); color:#fff; font-size:14px; }
+      .savebar { position:sticky; bottom:0; margin-top:24px; padding:14px 0; background:linear-gradient(180deg, transparent, #0a0240 40%); display:flex; gap:12px; align-items:center; }
+      .save { padding:14px 28px; border:0; border-radius:12px; background:linear-gradient(90deg,var(--accent),var(--accent2)); color:#fff; font-family:"Moderniz",sans-serif; font-size:16px; cursor:pointer; }
+      .msg { color:#7CFFB0; font-size:14px; }
+      a { color:var(--accent); }
+    </style>
+  </head>
+  <body>
+    <h1>SnapPro · Curator</h1>
+    <div class="sub">Drag each image to reframe, slider to zoom. Resize the logo. Generate the QR. Then <b>Save</b> — the game updates live.</div>
+
+    <h2>Prize images — drag to reposition, slider to zoom</h2>
+    <div class="grid" id="framers"></div>
+
+    <h2>Logo size</h2>
+    <div class="logobar">
+      <div class="prev"><img id="logoImg" src="/logo-white.png" alt="SnapPro" /></div>
+      <div class="c">
+        <div class="ctl">Height <input type="range" id="logoSize" min="24" max="120" value="50" step="1" /> <span id="logoVal">50</span>px</div>
+      </div>
+    </div>
+
+    <h2>QR code — scan to launch the game</h2>
+    <div class="qr">
+      <img id="qrImg" alt="QR" />
+      <div style="flex:1; min-width:240px;">
+        <div class="ctl" style="display:block; margin-bottom:8px;">Game URL (paste your live link once deployed, or use the local one):</div>
+        <input type="text" id="qrUrl" />
+        <div class="ctl" style="margin-top:8px;"><button class="reset" id="qrUpd">Update QR</button> &nbsp; <a id="qrDl" download="snappro-qr.png">⬇ download PNG (for the poster)</a></div>
+        <div class="sub" style="margin-top:8px;">Tip: for the booth, deploy first (so the link works on attendees' phones), then paste that URL here.</div>
+      </div>
+    </div>
+
+    <div class="savebar">
+      <button class="save" id="save">Save all changes</button>
+      <span class="msg" id="msg"></span>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const KEY = new URLSearchParams(location.search).get("key") || "";
+      let framing = { images: {}, logo: { size: 50 } };
+
+      async function init() {
+        const [cfg, fr] = await Promise.all([
+          fetch("/api/config").then((r) => r.json()),
+          fetch("/api/framing").then((r) => r.json()).catch(() => null),
+        ]);
+        if (fr) framing = { images: fr.images || {}, logo: fr.logo || { size: 50 } };
+
+        // logo
+        const ls = framing.logo.size || 50;
+        $("logoSize").value = ls; $("logoVal").textContent = ls; $("logoImg").style.height = ls + "px";
+        $("logoSize").oninput = (e) => { const v = +e.target.value; framing.logo.size = v; $("logoVal").textContent = v; $("logoImg").style.height = v + "px"; };
+
+        // framers for each prize image — transform translate(%)+scale so drag works at any zoom
+        const imgs = (cfg.showcase || []).filter((p) => p.image);
+        const clampXY = (f) => { const m = Math.max(0, (f.scale - 1) / 2 * 100); f.x = Math.max(-m, Math.min(m, f.x)); f.y = Math.max(-m, Math.min(m, f.y)); };
+        const tf = (f) => `translate(${f.x}%, ${f.y}%) scale(${f.scale})`;
+        $("framers").innerHTML = imgs.map((p) => {
+          const f = framing.images[p.image] || { x: 0, y: 0, scale: 1 };
+          framing.images[p.image] = f;
+          return `<div class="framer">
+            <div class="name">${p.name}</div>
+            <div class="box" data-img="${p.image}"><img src="${p.image}" style="transform:${tf(f)};" /></div>
+            <div class="ctl">Zoom <input type="range" min="1" max="3" step="0.01" value="${f.scale}" data-zoom="${p.image}" /></div>
+            <button class="reset" data-reset="${p.image}">reset</button>
+          </div>`;
+        }).join("");
+
+        $("framers").querySelectorAll(".box").forEach((box) => {
+          const key = box.dataset.img, img = box.querySelector("img");
+          let dragging = false, lx = 0, ly = 0;
+          box.addEventListener("pointerdown", (e) => { dragging = true; lx = e.clientX; ly = e.clientY; box.classList.add("drag"); box.setPointerCapture(e.pointerId); });
+          box.addEventListener("pointermove", (e) => {
+            if (!dragging) return;
+            const f = framing.images[key], w = box.clientWidth || 200;
+            f.x += (e.clientX - lx) / w * 100;
+            f.y += (e.clientY - ly) / w * 100;
+            clampXY(f);
+            lx = e.clientX; ly = e.clientY; img.style.transform = tf(f);
+          });
+          box.addEventListener("pointerup", () => { dragging = false; box.classList.remove("drag"); });
+        });
+        $("framers").querySelectorAll("[data-zoom]").forEach((z) => {
+          z.oninput = (e) => { const key = z.dataset.zoom, f = framing.images[key]; f.scale = +e.target.value; clampXY(f); document.querySelector(`.box[data-img="${key}"] img`).style.transform = tf(f); };
+        });
+        $("framers").querySelectorAll("[data-reset]").forEach((b) => {
+          b.onclick = () => { const key = b.dataset.reset; const f = framing.images[key] = { x: 0, y: 0, scale: 1 }; document.querySelector(`.box[data-img="${key}"] img`).style.transform = tf(f); const z = document.querySelector(`[data-zoom="${key}"]`); if (z) z.value = 1; };
+        });
+      }
+      init();
+
+      // QR
+      const setQR = () => {
+        const u = $("qrUrl").value.trim();
+        const src = "https://api.qrserver.com/v1/create-qr-code/?size=600x600&margin=10&data=" + encodeURIComponent(u);
+        $("qrImg").src = src; $("qrDl").href = src;
+      };
+      $("qrUrl").value = location.origin + "/";
+      setQR();
+      $("qrUpd").onclick = setQR;
+
+      // Save
+      $("save").onclick = async () => {
+        const r = await fetch("/api/admin/framing?key=" + encodeURIComponent(KEY), {
+          method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(framing),
+        });
+        $("msg").textContent = r.ok ? "✓ Saved — reload the game to see it." : "✗ Save failed (check ?key=)";
+        setTimeout(() => ($("msg").textContent = ""), 4000);
+      };
+    </script>
+  </body>
+</html>

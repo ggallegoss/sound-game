@@ -1,0 +1,100 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Needle Tuner 2 (motion)</title>
+    <style>
+      :root { --gold:#ffa33f; --accent:#00b8ff; }
+      * { box-sizing:border-box; }
+      body { margin:0; min-height:100vh; background:#0a0240; color:#f2f2f2; font-family:system-ui,sans-serif; display:flex; flex-direction:column; align-items:center; padding:14px; }
+      h1 { font-size:18px; margin:2px 0; }
+      .sub { color:rgba(255,255,255,.62); font-size:12px; text-align:center; max-width:540px; margin-bottom:4px; }
+      .wheelwrap { position:relative; width:300px; height:300px; margin:6px auto; }
+      .pointer { position:absolute; top:-14px; left:50%; transform:translateX(-50%); z-index:4; transform-origin:50% 3px; will-change:transform;
+        width:0; height:0; border-left:14px solid transparent; border-right:14px solid transparent; border-top:40px solid var(--gold); filter:drop-shadow(0 3px 4px rgba(0,0,0,.55)); }
+      .wheel { width:100%; height:100%; border-radius:50%; position:relative; border:8px solid rgba(255,255,255,.92); box-shadow:0 16px 50px rgba(0,0,0,.5); }
+      .seg { position:absolute; inset:0; }
+      .seg span { position:absolute; left:50%; top:12%; transform:translateX(-50%); font-size:22px; }
+      .peg { position:absolute; left:50%; top:50%; width:7px; height:20px; margin:-10px 0 0 -3.5px; border-radius:3px; background:#fff; box-shadow:0 0 0 1px rgba(0,0,0,.25); z-index:2; }
+      .peg.zero { background:#ff5a5a; }
+      .hub { position:absolute; top:50%; left:50%; width:46px; height:46px; transform:translate(-50%,-50%); z-index:3; border-radius:50%; background:#fff; display:flex; align-items:center; justify-content:center; font-size:15px; }
+      .panel { width:100%; max-width:540px; background:rgba(255,255,255,.05); border:1px solid rgba(255,255,255,.12); border-radius:14px; padding:14px; margin-top:6px; }
+      label { display:block; font-size:12px; color:rgba(255,255,255,.72); margin:10px 0 4px; }
+      input[type=range] { width:100%; }
+      .row { display:flex; gap:8px; flex-wrap:wrap; margin-top:10px; }
+      button { padding:11px 13px; border:1px solid rgba(255,255,255,.2); border-radius:10px; background:rgba(255,255,255,.08); color:#fff; font-size:13px; font-weight:600; cursor:pointer; }
+      button.on { background:linear-gradient(90deg,var(--accent),#7933f5); border:0; }
+      .read { font-family:ui-monospace,monospace; font-size:12px; color:var(--gold); margin-top:12px; white-space:pre-line; line-height:1.5; }
+    </style>
+  </head>
+  <body>
+    <h1>Needle Tuner 2 — in motion</h1>
+    <div class="sub">It spins on its own. Slow it right down and watch the RED peg hit the needle. Flip <b>Direction</b> and <b>Model</b> until the needle is pushed <i>by the peg</i> (not by empty air). Then read me the 3 settings.</div>
+    <div class="wheelwrap">
+      <div class="pointer" id="pointer"></div>
+      <div class="wheel" id="wheel"></div>
+      <div class="hub">🎬</div>
+    </div>
+    <div class="panel">
+      <label>Spin speed: <span id="spv">1.5</span> °/frame</label>
+      <input type="range" id="sp" min="0.2" max="9" value="1.5" step="0.1" />
+      <label>Strength / max bend: <span id="stv">22</span></label>
+      <input type="range" id="st" min="4" max="44" value="22" step="1" />
+      <div class="row">
+        <button id="dir">Direction: +s (with peg)</button>
+        <button id="model">Model: FLICK (tick on pass)</button>
+        <button id="pause">⏸ pause</button>
+      </div>
+      <div class="read" id="read"></div>
+    </div>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const SEGN = 8, SEGA = 360 / SEGN;
+      const ICONS = ["🏆", "💡", "✨", "🔊", "👜", "💳", "🎟️", "🎵"];
+      (function build() {
+        const cols = ["#2a1f8f", "#1a1060"];
+        const stops = ICONS.map((_, i) => `${i === 0 ? "#ffa33f" : cols[i % 2]} ${i * SEGA}deg ${(i + 1) * SEGA}deg`).join(",");
+        const w = $("wheel");
+        w.style.background = `conic-gradient(${stops})`;
+        const segs = ICONS.map((ic, i) => `<div class="seg" style="transform:rotate(${i * SEGA + SEGA / 2}deg)"><span>${ic}</span></div>`).join("");
+        const pegs = ICONS.map((_, i) => `<div class="peg ${i === 0 ? "zero" : ""}" style="transform:rotate(${i * SEGA}deg) translateY(-139px)"></div>`).join("");
+        w.innerHTML = segs + pegs;
+      })();
+
+      let angle = 0, speed = 1.5, DIR = 1, STR = 22, MODEL = "flick";
+      let flap = 0, flapV = 0, lastB = 0;
+      function render() {
+        const s = ((angle % SEGA) + SEGA) % SEGA;
+        if (MODEL === "ride") {
+          // needle locked to the peg up to STR degrees, then snaps back
+          if (s <= STR) { flap = DIR * s; flapV = 0; }
+          else { flapV += (0 - flap) * 0.42; flapV *= 0.55; flap += flapV; }
+        } else {
+          // FLICK: a peg crossing the top kicks the needle in the travel direction, then it springs back
+          const b = Math.floor(angle / SEGA);
+          if (b !== lastB) { flapV += DIR * STR * 0.22; lastB = b; }
+          flapV += (0 - flap) * 0.18; flapV *= 0.72; flap += flapV;
+        }
+        $("wheel").style.transform = `rotate(${angle}deg)`;
+        $("pointer").style.transform = `translateX(-50%) rotate(${flap.toFixed(2)}deg)`;
+        const peg0 = ((angle % 360) + 360) % 360;
+        $("read").textContent =
+          `peg 0 (red) is ${peg0.toFixed(0)}° clockwise from top\n` +
+          `needle flap = ${flap.toFixed(1)}°\n` +
+          `MODEL=${MODEL}   DIR=${DIR > 0 ? "+s" : "−s"}   STRENGTH=${STR}   SPEED=${speed}`;
+      }
+      let timer = setInterval(() => { angle = (angle + speed) % 360; render(); }, 16);
+      $("sp").oninput = (e) => { speed = +e.target.value; $("spv").textContent = speed; };
+      $("st").oninput = (e) => { STR = +e.target.value; $("stv").textContent = STR; };
+      $("dir").onclick = () => { DIR = -DIR; $("dir").textContent = "Direction: " + (DIR > 0 ? "+s (with peg)" : "−s (against)"); };
+      $("model").onclick = () => { MODEL = MODEL === "flick" ? "ride" : "flick"; $("model").textContent = "Model: " + (MODEL === "flick" ? "FLICK (tick on pass)" : "RIDE (track the peg)"); flap = 0; flapV = 0; };
+      $("pause").onclick = () => {
+        if (timer) { clearInterval(timer); timer = null; $("pause").textContent = "▶ play"; $("pause").classList.add("on"); }
+        else { timer = setInterval(() => { angle = (angle + speed) % 360; render(); }, 16); $("pause").textContent = "⏸ pause"; $("pause").classList.remove("on"); }
+      };
+      render();
+    </script>
+  </body>
+</html>

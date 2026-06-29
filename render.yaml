@@ -1,0 +1,15 @@
+# Render.com blueprint — free, persistent Node host (runs the app as-is).
+# Deploy: push this folder to a Git repo, then on render.com →
+# "New +" → "Blueprint" → pick the repo. (If the repo also contains the
+# Remotion project, set the service Root Directory to "sound-game".)
+services:
+  - type: web
+    name: snappro-sound-game
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: npm start
+    autoDeploy: false
+    envVars:
+      - key: NODE_VERSION
+        value: "20"

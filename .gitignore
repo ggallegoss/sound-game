@@ -1,0 +1,4 @@
+data/*
+!data/framing.json
+*.log
+node_modules/

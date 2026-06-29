@@ -1,0 +1,479 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+    <title>SnapPro · Sound in Film</title>
+    <style>
+      @font-face { font-family: "Moderniz"; src: url("/fonts/Moderniz.otf"); }
+      @font-face { font-family: "Neuzeit"; src: url("/fonts/neuzeit-grotesk-regular.ttf"); font-weight: 400; }
+      @font-face { font-family: "Neuzeit"; src: url("/fonts/neuzeit-grotesk-bold.ttf"); font-weight: 700; }
+
+      :root {
+        --bg: #0a0240;
+        --accent: #00b8ff;
+        --accent2: #7933f5;
+        --gold: #ffa33f;
+        --white: #f2f2f2;
+      }
+      * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+      html, body { margin: 0; height: 100%; }
+      body {
+        font-family: "Neuzeit", system-ui, sans-serif;
+        color: var(--white);
+        background:
+          radial-gradient(ellipse 80% 60% at 50% 0%, #2a1f8f 0%, transparent 60%),
+          radial-gradient(ellipse 70% 60% at 50% 100%, #2a1254 0%, transparent 60%),
+          var(--bg);
+        min-height: 100%;
+        display: flex; align-items: center; justify-content: center;
+        padding: 22px;
+      }
+      .card {
+        width: 100%; max-width: 460px; min-height: 70vh;
+        display: flex; flex-direction: column;
+      }
+      .kicker { letter-spacing: .18em; font-size: 12px; text-transform: uppercase; color: rgba(255,255,255,.55); font-weight: 700; }
+      h1 { font-family: "Moderniz", sans-serif; font-size: 34px; line-height: 1.05; letter-spacing: -.02em; margin: 10px 0 4px; }
+      .lead { color: rgba(255,255,255,.78); font-size: 16px; line-height: 1.45; }
+      label { display: block; font-size: 13px; color: rgba(255,255,255,.7); margin: 14px 0 5px; font-weight: 700; }
+      input, select {
+        width: 100%; padding: 13px 14px; border-radius: 12px; border: 1px solid rgba(255,255,255,.18);
+        background: rgba(255,255,255,.06); color: var(--white); font-size: 16px; font-family: inherit;
+      }
+      input::placeholder { color: rgba(255,255,255,.4); }
+      select option { color: #000; }
+      .row { display: flex; gap: 10px; }
+      .row > div { flex: 1; }
+      .check { display: flex; gap: 10px; align-items: flex-start; margin-top: 16px; font-size: 13px; color: rgba(255,255,255,.7); }
+      .check input { width: 20px; height: 20px; flex: 0 0 auto; margin-top: 1px; }
+      .btn {
+        margin-top: 22px; width: 100%; padding: 16px; border: 0; border-radius: 14px; cursor: pointer;
+        background: linear-gradient(90deg, var(--accent), var(--accent2)); color: #fff;
+        font-family: "Moderniz", sans-serif; font-size: 18px; letter-spacing: -.01em;
+        display: block; box-sizing: border-box; text-align: center; text-decoration: none;
+      }
+      .btn:disabled { opacity: .4; }
+      .btn.ghost { background: rgba(255,255,255,.08); }
+      .spacer { flex: 1; }
+      .step { display: none; animation: fade .3s ease; }
+      .step.on { display: flex; flex-direction: column; flex: 1; }
+      @keyframes fade { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; } }
+
+      /* quiz */
+      .qbar { height: 5px; background: rgba(255,255,255,.14); border-radius: 3px; overflow: hidden; margin-bottom: 18px; }
+      .qbar > div { height: 100%; background: var(--accent); transition: width .3s; }
+      .q { font-family: "Moderniz", sans-serif; font-size: 22px; line-height: 1.15; letter-spacing: -.02em; margin-bottom: 18px; }
+      .opt { width: 100%; text-align: left; padding: 15px 16px; margin-bottom: 11px; border-radius: 12px; border: 1px solid rgba(255,255,255,.18);
+        background: rgba(255,255,255,.05); color: var(--white); font-size: 16px; font-family: inherit; cursor: pointer; transition: .12s; }
+      .opt:active { transform: scale(.99); }
+      .opt.pick { border-color: var(--accent); background: rgba(0,184,255,.16); }
+      .opt.correct { border-color: #2bd576; background: rgba(43,213,118,.22); }
+      .opt.wrong { border-color: #ff5a5a; background: rgba(255,90,90,.2); }
+      .opt:disabled { cursor: default; }
+      #s-quiz.shake { animation: shake .4s; }
+      @keyframes shake { 0%,100%{transform:translateX(0)} 20%{transform:translateX(-9px)} 40%{transform:translateX(8px)} 60%{transform:translateX(-6px)} 80%{transform:translateX(4px)} }
+
+      /* full-screen reaction flash */
+      .flash { position: fixed; inset: 0; pointer-events: none; z-index: 40; opacity: 0; }
+      .flash.right { animation: flashRight .7s ease-out; }
+      .flash.bad { animation: flashBad .55s ease-out; }
+      @keyframes flashRight {
+        0%{opacity:0} 25%{opacity:.85; background:radial-gradient(circle at 50% 45%, rgba(0,184,255,.55), rgba(43,213,118,.35) 45%, transparent 72%)}
+        60%{opacity:.5; background:radial-gradient(circle at 50% 45%, rgba(121,51,245,.5), transparent 70%)} 100%{opacity:0}
+      }
+      @keyframes flashBad {
+        0%{opacity:0} 30%{opacity:.7; background:radial-gradient(circle at 50% 45%, rgba(255,60,60,.6), transparent 72%)} 100%{opacity:0}
+      }
+
+      /* wheel */
+      .wheelwrap { position: relative; width: 320px; height: 320px; margin: 40px auto 0; }
+      .pointer { position: absolute; top: -10px; left: 50%; transform: translateX(-50%); z-index: 4;
+        transform-origin: 50% 2px; will-change: transform;
+        width: 0; height: 0; border-left: 14px solid transparent; border-right: 14px solid transparent; border-top: 30px solid var(--gold); filter: drop-shadow(0 3px 4px rgba(0,0,0,.55)); }
+      .peg { position: absolute; left: 50%; top: 50%; width: 5px; height: 13px; margin: -6.5px 0 0 -2.5px; border-radius: 3px;
+        background: rgba(255,255,255,.92); box-shadow: 0 0 0 1px rgba(0,0,0,.18); z-index: 2; }
+      .wheel { width: 100%; height: 100%; border-radius: 50%; position: relative;
+        border: 8px solid rgba(255,255,255,.9); box-shadow: 0 20px 60px rgba(0,0,0,.5), inset 0 0 0 2px rgba(0,0,0,.2);
+        transition: transform 5s cubic-bezier(.12,.66,.16,1); }
+      .seg { position: absolute; inset: 0; }
+      .seg span { position: absolute; left: 50%; top: 14%; transform: translateX(-50%); font-size: 26px; }
+      .hub { position: absolute; top: 50%; left: 50%; width: 56px; height: 56px; transform: translate(-50%,-50%); z-index: 2;
+        border-radius: 50%; background: #fff; display: flex; align-items: center; justify-content: center; font-family: "Moderniz", sans-serif; color: var(--bg); font-size: 13px; box-shadow: 0 4px 14px rgba(0,0,0,.4); }
+
+      /* result */
+      .prize { text-align: center; margin-top: 10px; }
+      .prize .ic { font-size: 72px; }
+      .prize .t { font-family: "Moderniz", sans-serif; font-size: 16px; letter-spacing: .1em; text-transform: uppercase; color: var(--gold); margin-top: 6px; }
+      .prize .n { font-family: "Moderniz", sans-serif; font-size: 30px; letter-spacing: -.02em; margin: 6px 0; line-height: 1.1; }
+      .code { margin: 18px auto 0; max-width: 320px; padding: 18px; border-radius: 16px; border: 2px dashed var(--accent); background: rgba(0,184,255,.08); text-align: center; }
+      .code .lbl { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: rgba(255,255,255,.6); }
+      .code .v { font-family: "Moderniz", sans-serif; font-size: 38px; letter-spacing: .04em; margin-top: 4px; }
+      .muted { color: rgba(255,255,255,.6); font-size: 13px; text-align: center; margin-top: 14px; line-height: 1.5; }
+      .err { color: #ff8a8a; font-size: 14px; margin-top: 10px; }
+      .logo { height: 26px; opacity: .9; }
+      .applogo { display: flex; justify-content: center; padding: 2px 0 18px; }
+      .applogo img { height: 50px; opacity: .95; }
+      .confetti { position: fixed; inset: 0; pointer-events: none; z-index: 50; }
+
+      /* splash / prize showcase */
+      .hero { text-align: center; }
+      .showcase { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; margin: 20px 0 0; }
+      .pcard { width: 142px; border-radius: 16px; padding: 13px 12px 16px; text-align: center;
+        background: rgba(255,255,255,.06); border: 1px solid rgba(255,255,255,.14); overflow: hidden; }
+      .pcard.grand { border-color: var(--gold); background: linear-gradient(180deg, rgba(255,163,63,.18), rgba(255,255,255,.05)); }
+      .pcard.mid { border-color: var(--accent2); }
+      .pcard .badge { display: inline-block; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; padding: 4px 11px; border-radius: 20px; font-weight: 700; margin-bottom: 11px; }
+      .badge.grand { background: var(--gold); color: #2a1254; } .badge.mid { background: var(--accent2); color: #fff; } .badge.base { background: rgba(255,255,255,.18); color: #fff; }
+      .pcard .pic { width: 100%; height: 116px; border-radius: 10px; object-fit: cover; background: #0a0628; display: block; }
+      .pcard .ico { font-size: 50px; height: 116px; display: flex; align-items: center; justify-content: center; }
+      .pcard .pn { font-size: 13px; font-weight: 700; margin-top: 10px; line-height: 1.25; }
+      .swagnote { text-align: center; color: rgba(255,255,255,.62); font-size: 13px; margin-top: 16px; }
+
+      /* quiz photo */
+      .qimg { width: 100%; height: 150px; object-fit: cover; border-radius: 14px; margin-bottom: 16px; border: 1px solid rgba(255,255,255,.15); }
+
+      /* near-miss message */
+      .miss { text-align: center; font-family: "Moderniz", sans-serif; min-height: 30px; margin-top: 14px; font-size: 20px; letter-spacing: -.01em; opacity: 0; transition: opacity .3s; }
+      .miss.show { opacity: 1; }
+      .miss.win { color: var(--gold); }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div class="applogo"><img src="/logo-white.png" alt="SnapPro" onerror="this.style.display='none'" /></div>
+      <!-- 0. SPLASH / PRIZE SHOWCASE -->
+      <section class="step on" id="s-splash">
+        <div class="hero">
+          <div class="kicker">Sound in Film · Play &amp; Win</div>
+          <h1>Play. Win.<br />Every&nbsp;time.</h1>
+          <p class="lead">Test your cinematic-sound IQ, spin the wheel, and walk away with a prize — from swag to a <b>smart speaker</b>. Here's what's up for grabs:</p>
+        </div>
+        <div class="showcase" id="showcase"></div>
+        <div class="swagnote">Plus stickers, totes, markers &amp; more — <b>everyone wins something.</b></div>
+        <div class="spacer"></div>
+        <button class="btn" id="go-form">Let's play &rarr;</button>
+      </section>
+
+      <!-- 1. INTRO / FORM -->
+      <section class="step" id="s-form">
+        <div class="kicker">Almost there — enter to play</div>
+        <h1>Who's playing?</h1>
+        <p class="lead">Quick info so we can hand you your prize (and nothing more without your say-so).</p>
+        <label>Name</label>
+        <input id="f-name" placeholder="First & last name" autocomplete="name" />
+        <label>Email *</label>
+        <input id="f-email" type="email" placeholder="you@email.com" autocomplete="email" />
+        <div class="row">
+          <div><label>Phone (optional)</label><input id="f-phone" type="tel" placeholder="(•••)" autocomplete="tel" /></div>
+          <div><label>ZIP</label><input id="f-zip" inputmode="numeric" placeholder="ZIP" autocomplete="postal-code" /></div>
+        </div>
+        <label>What are you dreaming up?</label>
+        <select id="f-interest">
+          <option value="">Select…</option>
+          <option>Home theater</option>
+          <option>Whole-home audio</option>
+          <option>Outdoor entertainment</option>
+          <option>Commercial / business space</option>
+          <option>Just here for fun</option>
+        </select>
+        <label>You are a…</label>
+        <select id="f-role">
+          <option value="">Select…</option>
+          <option>Homeowner</option>
+          <option>Business owner</option>
+          <option>Architect / designer</option>
+          <option>AV pro / integrator</option>
+          <option>Other</option>
+        </select>
+        <label class="check"><input type="checkbox" id="f-consent" /> <span>Yes, SnapPro can email me about my entry and services. I'm 18+ and agree to the <a href="#" style="color:var(--accent)">official rules</a>.</span></label>
+        <div class="err" id="form-err"></div>
+        <button class="btn" id="go-quiz">Start &rarr;</button>
+      </section>
+
+      <!-- 2. QUIZ -->
+      <section class="step" id="s-quiz">
+        <div class="qbar"><div id="qprog" style="width:0%"></div></div>
+        <img class="qimg" id="q-img" alt="" />
+        <div class="q" id="q-text">…</div>
+        <div id="q-opts"></div>
+        <div class="spacer"></div>
+        <div class="muted" id="q-count"></div>
+      </section>
+
+      <!-- 3. SPIN -->
+      <section class="step" id="s-spin">
+        <div class="kicker" style="text-align:center">You scored <span id="score">0</span>/<span id="scoretot">5</span> — tap STOP to win!</div>
+        <div class="wheelwrap">
+          <div class="pointer" id="pointer"></div>
+          <div class="wheel" id="wheel"></div>
+          <div class="hub">🎬</div>
+        </div>
+        <div class="miss" id="miss"></div>
+        <div class="spacer"></div>
+        <button class="btn" id="go-spin">STOP</button>
+      </section>
+
+      <!-- 4. RESULT -->
+      <section class="step" id="s-result">
+        <div class="prize">
+          <div class="ic" id="r-ic">🎉</div>
+          <div class="t" id="r-tier">You won</div>
+          <div class="n" id="r-name">—</div>
+        </div>
+        <div class="code">
+          <div class="lbl">Show this at the SnapPro booth to claim</div>
+          <div class="v" id="r-code">SP-····</div>
+        </div>
+        <p class="muted" id="r-msg">Screenshot this! Our team will hand over your prize and answer any questions about bringing cinematic sound & video to your space.</p>
+        <div class="spacer"></div>
+        <a class="btn ghost" href="https://www.snapproav.com/" target="_blank" rel="noopener">Learn about SnapPro</a>
+      </section>
+    </div>
+
+    <div class="flash" id="flash"></div>
+    <canvas class="confetti" id="confetti"></canvas>
+
+    <script>
+      const $ = (id) => document.getElementById(id);
+      const show = (id) => {
+        document.querySelectorAll(".step").forEach((s) => s.classList.remove("on"));
+        $(id).classList.add("on");
+        window.scrollTo(0, 0);
+      };
+      let CFG = null, answers = [], qi = 0;
+
+      const SEG = [
+        { icon: "✨", tier: "base" }, { icon: "💡", tier: "mid" },
+        { icon: "🔁", tier: "miss" }, { icon: "🔊", tier: "grand" },
+        { icon: "👜", tier: "base" }, { icon: "💳", tier: "mid" },
+        { icon: "🎟️", tier: "base" }, { icon: "✨", tier: "base" },
+      ];
+      const SEGN = SEG.length, SEGA = 360 / SEGN;
+
+      function buildWheel() {
+        const colors = ["#2a1f8f", "#1a1060"];
+        const stops = SEG.map((s, i) => {
+          const c = s.tier === "grand" ? "#ffa33f" : s.tier === "mid" ? "#7933f5"
+            : s.tier === "miss" ? "#3a1430" : colors[i % 2];
+          return `${c} ${i * SEGA}deg ${(i + 1) * SEGA}deg`;
+        }).join(",");
+        const w = $("wheel");
+        w.style.background = `conic-gradient(${stops})`;
+        const segs = SEG.map((s, i) => {
+          const a = i * SEGA + SEGA / 2;
+          return `<div class="seg" style="transform:rotate(${a}deg)"><span>${s.icon}</span></div>`;
+        }).join("");
+        // a peg at every segment boundary (the flapper ticks off these)
+        const pegs = SEG.map((s, i) => `<div class="peg" style="transform:rotate(${i * SEGA}deg) translateY(-150px)"></div>`).join("");
+        w.innerHTML = segs + pegs;
+      }
+
+      let FRAMING = { images: {}, logo: { size: 50 } };
+      function renderShowcase() {
+        const order = { grand: 0, mid: 1 };
+        // headline prizes only (swag is covered by the note below)
+        const items = (CFG.showcase || []).filter((p) => p.tier !== "base").sort((a, b) => order[a.tier] - order[b.tier]);
+        $("showcase").innerHTML = items.map((p) => {
+          const f = (FRAMING.images && FRAMING.images[p.image]) || { x: 0, y: 0, scale: 1 };
+          const st = `style="transform:translate(${f.x}%, ${f.y}%) scale(${f.scale});"`;
+          const visual = p.image ? `<img class="pic" src="${p.image}" ${st} alt="" />` : `<div class="ico">${p.icon}</div>`;
+          const label = p.tier === "grand" ? "Grand prize" : "Prize";
+          return `<div class="pcard ${p.tier}"><span class="badge ${p.tier}">${label}</span>${visual}<div class="pn">${p.name}</div></div>`;
+        }).join("");
+      }
+
+      async function init() {
+        const [cfg, fr] = await Promise.all([
+          fetch("/api/config").then((r) => r.json()),
+          fetch("/api/framing").then((r) => r.json()).catch(() => null),
+        ]);
+        CFG = cfg;
+        if (fr) FRAMING = { images: fr.images || {}, logo: fr.logo || { size: 50 } };
+        // apply curator logo size
+        document.querySelectorAll(".applogo img").forEach((el) => { el.style.height = (FRAMING.logo.size || 50) + "px"; });
+        $("scoretot").textContent = CFG.quiz.length;
+        buildWheel();
+        renderShowcase();
+      }
+      init();
+
+      $("go-form").onclick = () => show("s-form");
+
+      $("go-quiz").onclick = () => {
+        const email = $("f-email").value.trim();
+        if (!email.includes("@")) return ($("form-err").textContent = "Please enter a valid email.");
+        if (!$("f-consent").checked) return ($("form-err").textContent = "Please accept to continue.");
+        $("form-err").textContent = "";
+        answers = []; qi = 0;
+        renderQuestion();
+        show("s-quiz");
+      };
+
+      function renderQuestion() {
+        const q = CFG.quiz[qi];
+        $("qprog").style.width = (qi / CFG.quiz.length) * 100 + "%";
+        const img = $("q-img");
+        if (q.image) { img.src = q.image; img.style.display = "block"; } else { img.style.display = "none"; }
+        $("q-text").textContent = q.q;
+        $("q-count").textContent = `Question ${qi + 1} of ${CFG.quiz.length}`;
+        $("q-opts").innerHTML = q.options
+          .map((o, i) => `<button class="opt" data-i="${i}">${o}</button>`)
+          .join("");
+        const opts = $("q-opts").querySelectorAll(".opt");
+        opts.forEach((b) => {
+          b.onclick = () => {
+            const pick = +b.dataset.i;
+            answers[qi] = pick;
+            opts.forEach((o) => (o.disabled = true));
+            const isRight = pick === q.answer;
+            b.classList.add(isRight ? "correct" : "wrong");
+            if (!isRight && opts[q.answer]) opts[q.answer].classList.add("correct"); // reveal the right one
+            if (isRight) {
+              flash("right"); confettiBurst(70, 0.42);
+            } else {
+              flash("bad");
+              const s = $("s-quiz"); s.classList.add("shake");
+              setTimeout(() => s.classList.remove("shake"), 420);
+            }
+            setTimeout(() => {
+              qi++;
+              if (qi < CFG.quiz.length) renderQuestion();
+              else gotoSpin();
+            }, isRight ? 950 : 1150);
+          };
+        });
+      }
+
+      let RESULT = null;
+      async function gotoSpin() {
+        show("s-spin");
+        // wheel starts spinning the moment they arrive; they control the STOP
+        startContinuous();
+        phase = "r1";
+        const btn = $("go-spin");
+        btn.textContent = "STOP";
+        btn.disabled = false;
+        $("miss").className = "miss";
+        const payload = {
+          name: $("f-name").value, email: $("f-email").value, phone: $("f-phone").value,
+          zip: $("f-zip").value, interest: $("f-interest").value, role: $("f-role").value,
+          consent: $("f-consent").checked, answers,
+        };
+        try {
+          RESULT = await (await fetch("/api/play", {
+            method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload),
+          })).json();
+        } catch { RESULT = { error: "Network error — try again." }; }
+        if (RESULT && RESULT.score != null) $("score").textContent = RESULT.score;
+      }
+
+      // ---- peg-wheel spinner — needle confirmed in the tuner (−s, max-bend 13) + heavy-friction stop
+      let angle = 0, mode = "idle", rafId = null, stepFn = null, phase = "r1";
+      let flap = 0, flapV = 0, lastBound = 0;
+      const SPEED = 11, FLICK_DIR = -1, FLICK_STR = 44; // FLICK model (tuner-confirmed)
+      const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+
+      function applyFrame() {
+        const b = Math.floor(angle / SEGA);
+        if (b !== lastBound) { flapV += FLICK_DIR * FLICK_STR * 0.22; lastBound = b; } // a peg crossed → flick
+        flapV += (0 - flap) * 0.18; flapV *= 0.72; flap += flapV;                       // spring back to rest
+        $("wheel").style.transform = `rotate(${angle}deg)`;
+        const p = $("pointer"); if (p) p.style.transform = `translateX(-50%) rotate(${flap.toFixed(2)}deg)`;
+      }
+      function loop() {
+        if (mode === "idle") { rafId = null; return; }
+        if (mode === "spin") angle += SPEED;
+        else if (mode === "move" && stepFn) stepFn();
+        applyFrame();
+        rafId = requestAnimationFrame(loop);
+      }
+      function ensureLoop() { if (!rafId) loop(); }
+      function startContinuous() { $("wheel").style.transition = "none"; mode = "spin"; ensureLoop(); }
+      const isSpinning = () => mode === "spin";
+
+      // heavy friction: decays to a stop exactly on `to` (the feel you picked — lab2 #3)
+      function friction(to, f) {
+        return new Promise((res) => {
+          let v = (to - angle) * (1 - f);
+          stepFn = () => { angle += v; v *= f; if (Math.abs(v) < 0.02) { angle = to; stepFn = null; res(); } };
+          mode = "move"; ensureLoop();
+        });
+      }
+      function stopOn(targetIndex, turns) {
+        const segCenter = targetIndex * SEGA + SEGA / 2;
+        const desiredMod = ((360 - (segCenter % 360)) % 360 + 360) % 360;
+        let target = angle + turns * 360;
+        target += (desiredMod - (((target % 360) + 360) % 360) + 360) % 360;
+        return friction(target, 0.993).then(() => { mode = "idle"; });
+      }
+
+      $("go-spin").onclick = async () => {
+        const btn = $("go-spin"), miss = $("miss");
+        if (phase === "r1") {
+          if (!isSpinning()) return;
+          phase = "busy"; btn.disabled = true;
+          // first STOP → near miss
+          await stopOn(SEG.findIndex((s) => s.tier === "miss"), 7);
+          miss.textContent = "Aww… so close! 😬";
+          miss.className = "miss show";
+          await wait(1200);
+          miss.textContent = "🎉 One more chance — spin again!";
+          miss.className = "miss show win";
+          btn.textContent = "SPIN AGAIN";
+          btn.disabled = false;
+          phase = "r2idle";
+        } else if (phase === "r2idle") {
+          miss.className = "miss";
+          startContinuous();
+          btn.textContent = "STOP";
+          phase = "r2";
+        } else if (phase === "r2") {
+          if (!isSpinning()) return;
+          if (!RESULT || RESULT.error) { alert((RESULT && RESULT.error) || "Try again"); return; }
+          phase = "busy"; btn.disabled = true;
+          // second STOP → the real, server-decided prize (heavy friction, slow tense finish)
+          const idxs = SEG.map((s, i) => (s.tier === RESULT.prizeTier ? i : -1)).filter((i) => i >= 0);
+          const target = idxs.length ? idxs[Math.floor(Math.random() * idxs.length)] : 0;
+          await stopOn(target, 8);
+          reveal();
+        }
+      };
+
+      function reveal() {
+        $("miss").className = "miss";
+        $("r-ic").textContent = RESULT.prizeIcon || "🎉";
+        $("r-tier").textContent = RESULT.alreadyPlayed ? "You already played — your prize" : (RESULT.prizeTier === "grand" ? "JACKPOT! You won" : "You won");
+        $("r-name").textContent = RESULT.prizeName;
+        $("r-code").textContent = RESULT.code;
+        show("s-result");
+        if (RESULT.prizeTier !== "base") burst();
+      }
+
+      // lightweight confetti (parametrized)
+      function confettiBurst(n, oy, cols) {
+        n = n || 140; oy = oy || 1 / 3;
+        cols = cols || ["#00b8ff", "#7933f5", "#ffa33f", "#ffffff"];
+        const c = $("confetti"), ctx = c.getContext("2d");
+        c.width = innerWidth; c.height = innerHeight;
+        const P = Array.from({ length: n }, () => ({
+          x: innerWidth / 2, y: innerHeight * oy, vx: (Math.random() - .5) * 14, vy: Math.random() * -13 - 4,
+          c: cols[(Math.random() * cols.length) | 0], s: Math.random() * 6 + 3,
+        }));
+        let t = 0;
+        (function loop() {
+          ctx.clearRect(0, 0, c.width, c.height);
+          P.forEach((p) => { p.vy += .5; p.x += p.vx; p.y += p.vy; ctx.fillStyle = p.c; ctx.fillRect(p.x, p.y, p.s, p.s); });
+          if (t++ < 130) requestAnimationFrame(loop); else ctx.clearRect(0, 0, c.width, c.height);
+        })();
+      }
+      function burst() { confettiBurst(140, 1 / 3); }
+      // full-screen reaction flash: "right" (cool colors) or "bad" (red)
+      function flash(kind) {
+        const f = $("flash");
+        f.className = "flash"; void f.offsetWidth;
+        f.className = "flash " + (kind === "right" ? "right" : "bad");
+      }
+    </script>
+  </body>
+</html>
