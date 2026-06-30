@@ -26,7 +26,7 @@
           radial-gradient(ellipse 70% 60% at 50% 100%, #2a1254 0%, transparent 60%),
           var(--bg);
         min-height: 100%;
-        display: flex; align-items: center; justify-content: center;
+        display: flex; align-items: flex-start; justify-content: center; /* top-aligned so tall content scrolls (no top crop) */
         padding: 22px;
       }
       .card {
@@ -125,7 +125,8 @@
       .pcard.mid { border-color: var(--accent2); }
       .pcard .badge { display: inline-block; font-size: 9px; letter-spacing: .12em; text-transform: uppercase; padding: 4px 11px; border-radius: 20px; font-weight: 700; margin-bottom: 11px; }
       .badge.grand { background: var(--gold); color: #2a1254; } .badge.mid { background: var(--accent2); color: #fff; } .badge.base { background: rgba(255,255,255,.18); color: #fff; }
-      .pcard .pic { width: 100%; height: 116px; border-radius: 10px; object-fit: cover; background: #0a0628; display: block; }
+      .pcard .picwrap { width: 100%; height: 116px; border-radius: 10px; overflow: hidden; background: #0a0628; }
+      .pcard .pic { width: 100%; height: 100%; object-fit: cover; display: block; }
       .pcard .ico { font-size: 50px; height: 116px; display: flex; align-items: center; justify-content: center; }
       .pcard .pn { font-size: 13px; font-weight: 700; margin-top: 10px; line-height: 1.25; }
       .swagnote { text-align: center; color: rgba(255,255,255,.62); font-size: 13px; margin-top: 16px; }
@@ -277,7 +278,7 @@
         $("showcase").innerHTML = items.map((p) => {
           const f = (FRAMING.images && FRAMING.images[p.image]) || { x: 0, y: 0, scale: 1 };
           const st = `style="transform:translate(${f.x}%, ${f.y}%) scale(${f.scale});"`;
-          const visual = p.image ? `<img class="pic" src="${p.image}" ${st} alt="" />` : `<div class="ico">${p.icon}</div>`;
+          const visual = p.image ? `<div class="picwrap"><img class="pic" src="${p.image}" ${st} alt="" /></div>` : `<div class="ico">${p.icon}</div>`;
           const label = p.tier === "grand" ? "Grand prize" : "Prize";
           return `<div class="pcard ${p.tier}"><span class="badge ${p.tier}">${label}</span>${visual}<div class="pn">${p.name}</div></div>`;
         }).join("");
@@ -368,7 +369,7 @@
         if (RESULT && RESULT.score != null) $("score").textContent = RESULT.score;
       }
 
-      // ---- peg-wheel spinner — needle confirmed in the tuner (−s, max-bend 13) + heavy-friction stop
+      // ---- peg-wheel spinner — FLICK needle (tuner-confirmed) + snappy eased spin-down
       let angle = 0, mode = "idle", rafId = null, stepFn = null, phase = "r1";
       let flap = 0, flapV = 0, lastBound = 0;
       const SPEED = 11, FLICK_DIR = -1, FLICK_STR = 44; // FLICK model (tuner-confirmed)
@@ -392,20 +393,22 @@
       function startContinuous() { $("wheel").style.transition = "none"; mode = "spin"; ensureLoop(); }
       const isSpinning = () => mode === "spin";
 
-      // heavy friction: decays to a stop exactly on `to` (the feel you picked — lab2 #3)
-      function friction(to, f) {
+      // eased spin-down: snappy, believable decel that settles cleanly on `to`
+      function moveTo(to, durMs, ease) {
         return new Promise((res) => {
-          let v = (to - angle) * (1 - f);
-          stepFn = () => { angle += v; v *= f; if (Math.abs(v) < 0.02) { angle = to; stepFn = null; res(); } };
+          const from = angle, frames = Math.max(1, Math.round(durMs / 16.67));
+          let f = 0;
+          stepFn = () => { f++; const t = Math.min(1, f / frames); angle = from + (to - from) * ease(t); if (t >= 1) { stepFn = null; res(); } };
           mode = "move"; ensureLoop();
         });
       }
-      function stopOn(targetIndex, turns) {
+      const easeOutQuart = (t) => 1 - Math.pow(1 - t, 4);
+      function stopOn(targetIndex, turns, durMs) {
         const segCenter = targetIndex * SEGA + SEGA / 2;
         const desiredMod = ((360 - (segCenter % 360)) % 360 + 360) % 360;
         let target = angle + turns * 360;
         target += (desiredMod - (((target % 360) + 360) % 360) + 360) % 360;
-        return friction(target, 0.993).then(() => { mode = "idle"; });
+        return moveTo(target, durMs, easeOutQuart).then(() => { mode = "idle"; });
       }
 
       $("go-spin").onclick = async () => {
@@ -413,8 +416,8 @@
         if (phase === "r1") {
           if (!isSpinning()) return;
           phase = "busy"; btn.disabled = true;
-          // first STOP → near miss
-          await stopOn(SEG.findIndex((s) => s.tier === "miss"), 7);
+          // first STOP → near miss (quick, snappy)
+          await stopOn(SEG.findIndex((s) => s.tier === "miss"), 4, 2100);
           miss.textContent = "Aww… so close! 😬";
           miss.className = "miss show";
           await wait(1200);
@@ -432,10 +435,10 @@
           if (!isSpinning()) return;
           if (!RESULT || RESULT.error) { alert((RESULT && RESULT.error) || "Try again"); return; }
           phase = "busy"; btn.disabled = true;
-          // second STOP → the real, server-decided prize (heavy friction, slow tense finish)
+          // second STOP → the real, server-decided prize (eased spin-down, clean settle)
           const idxs = SEG.map((s, i) => (s.tier === RESULT.prizeTier ? i : -1)).filter((i) => i >= 0);
           const target = idxs.length ? idxs[Math.floor(Math.random() * idxs.length)] : 0;
-          await stopOn(target, 8);
+          await stopOn(target, 5, 2600);
           reveal();
         }
       };

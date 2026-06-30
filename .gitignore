@@ -2,3 +2,10 @@ data/*
 !data/framing.json
 *.log
 node_modules/
+
+# local-only runtime artifacts (tunnel binary + generated link/QR)
+cloudflared.exe
+cf.live
+cf.out
+LIVE-URL.txt
+SnapPro-LIVE-QR.png
