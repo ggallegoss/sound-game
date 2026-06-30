@@ -24,6 +24,9 @@ const CONFIG_FILE = join(__dirname, "config.json");
 const PUBLIC_DIR = join(__dirname, "public");
 
 const cfg = JSON.parse(readFileSync(CONFIG_FILE, "utf8"));
+// Allow the admin key to be overridden by an env var (so a public repo never
+// exposes the live dashboard key — set ADMIN_KEY in the host's env).
+if (process.env.ADMIN_KEY) cfg.adminKey = process.env.ADMIN_KEY;
 if (!existsSync(DATA_DIR)) mkdirSync(DATA_DIR, { recursive: true });
 
 // ---------------------------------------------------------------------------
