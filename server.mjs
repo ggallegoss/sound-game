@@ -18,7 +18,9 @@ import { dirname, join, extname } from "node:path";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PORT = process.env.PORT || 3000;
-const DATA_DIR = join(__dirname, "data");
+// DATA_DIR can be pointed at a mounted persistent disk (e.g. on Render, set
+// DATA_DIR=/var/data) so leads + prize counts survive restarts/redeploys.
+const DATA_DIR = process.env.DATA_DIR || join(__dirname, "data");
 const STATE_FILE = join(DATA_DIR, "state.json");
 const CONFIG_FILE = join(__dirname, "config.json");
 const PUBLIC_DIR = join(__dirname, "public");
@@ -36,17 +38,27 @@ const isLimited = (p) => p.tier === "grand" || p.tier === "mid";
 
 function seed() {
   const now = Date.now();
-  const minutes =
-    cfg.event.demoCompressMin > 0
-      ? cfg.event.demoCompressMin
-      : cfg.event.durationMin;
+  const compressed = cfg.event.demoCompressMin > 0;
+  const minutes = compressed ? cfg.event.demoCompressMin : cfg.event.durationMin;
   const durationMs = minutes * 60_000;
+
+  // Anchor the prize window to a fixed wall-clock start when configured
+  // (cfg.event.startISO). This makes the 6:00-9:30pm pacing survive cloud
+  // restarts/redeploys — a re-seed always lands the same window, and if the
+  // server first boots before the start, all golden tickets are simply in the
+  // future (base swag only) until the event begins. demoCompressMin (local
+  // testing) always starts "now" so tests run immediately.
+  let startTs = now;
+  if (!compressed && cfg.event.startISO) {
+    const parsed = new Date(cfg.event.startISO).getTime();
+    if (!Number.isNaN(parsed)) startTs = parsed;
+  }
 
   const tickets = [];
   for (const p of cfg.prizes.filter(isLimited)) {
     for (let k = 0; k < p.total; k++) {
-      const a = now + (durationMs * k) / p.total;
-      const b = now + (durationMs * (k + 1)) / p.total;
+      const a = startTs + (durationMs * k) / p.total;
+      const b = startTs + (durationMs * (k + 1)) / p.total;
       tickets.push({ prizeId: p.id, time: a + Math.random() * (b - a), used: false });
     }
   }
@@ -54,6 +66,7 @@ function seed() {
 
   return {
     seededAt: now,
+    startTs,
     durationMs,
     prizes: cfg.prizes.map((p) => ({ ...p, remaining: p.total, awarded: 0 })),
     tickets,
@@ -248,6 +261,8 @@ const server = http.createServer(async (req, res) => {
         tier: p.tier,
         icon: p.icon,
         image: p.image || null,
+        note: p.note || null,
+        featured: p.featured || false,
       })),
     });
   }
@@ -313,6 +328,18 @@ const server = http.createServer(async (req, res) => {
           redeemed: l.redeemed,
           playedAt: l.playedAt,
         })),
+    });
+  }
+
+  // Admin: reset — wipe all plays and re-seed the prize schedule. Use once
+  // after final testing to clear test leads; the fixed startISO window means
+  // the 6:00-9:30pm pacing is restored automatically.
+  if (path === "/api/admin/reset" && req.method === "POST") {
+    if (!auth(url)) return sendJSON(res, 403, { error: "bad key" });
+    return withLock(() => {
+      state = seed();
+      save();
+      return sendJSON(res, 200, { ok: true, reseeded: true, leads: 0 });
     });
   }
 

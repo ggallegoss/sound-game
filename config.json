@@ -7,82 +7,83 @@
     "accent2": "#7933F5"
   },
   "event": {
-    "durationMin": 240,
+    "startISO": "2026-07-25T18:00:00-05:00",
+    "durationMin": 210,
     "demoCompressMin": 0,
-    "_comment": "durationMin = real event length. Set demoCompressMin > 0 (e.g. 5) to squeeze all golden-ticket prizes into a few minutes for testing."
+    "_comment": "Prizes pace across startISO .. startISO+durationMin. 6:00pm-9:30pm Central = 210 min (all 7 Alexas released by 9:30, base swag continues to 10pm close). startISO is a FIXED wall-clock anchor so cloud restarts keep the same window. Set demoCompressMin > 0 (e.g. 5) to squeeze prizes into minutes for local testing (ignores startISO)."
   },
   "prizes": [
     {
       "id": "grand1",
-      "name": "Sonos Era 300 Speaker",
+      "name": "Amazon Alexa",
       "tier": "grand",
-      "total": 1,
-      "icon": "🔊",
-      "image": "/photos/prize_speaker.jpg"
+      "total": 7,
+      "icon": "🎙️",
+      "image": "/photos/prize_alexa.jpg",
+      "_sponsor": "SnapPro"
     },
     {
-      "id": "grand2",
-      "name": "Amazon Echo Show",
-      "tier": "grand",
-      "total": 1,
-      "icon": "📺",
-      "image": "/photos/prize_display.jpg"
+      "id": "meyer1",
+      "name": "Meyer Sound Surprise Pack",
+      "tier": "base",
+      "featured": true,
+      "total": 100000,
+      "icon": "🎁",
+      "image": "/photos/prize_meyer.jpg",
+      "note": "While supplies last",
+      "weight": 2,
+      "_sponsor": "Meyer Sound"
     },
     {
-      "id": "grand3",
-      "name": "JBL Flip Speaker",
-      "tier": "grand",
-      "total": 1,
-      "icon": "🎵",
-      "image": "/photos/prize_portable.jpg"
+      "id": "uni1",
+      "name": "Unilumin Golf Umbrella",
+      "tier": "base",
+      "featured": true,
+      "total": 100000,
+      "icon": "⛱️",
+      "image": "/photos/prize_umbrella.jpg",
+      "note": "While supplies last",
+      "weight": 2,
+      "_sponsor": "Unilumin"
     },
     {
-      "id": "mid1",
-      "name": "Smart LED Light Kit",
-      "tier": "mid",
-      "total": 20,
-      "icon": "💡",
-      "image": "/photos/prize_led.jpg"
-    },
-    {
-      "id": "mid2",
-      "name": "$25 Gift Card",
-      "tier": "mid",
-      "total": 30,
-      "icon": "💳",
-      "image": "/photos/prize_gift.jpg"
+      "id": "uni2",
+      "name": "Unilumin Backpack",
+      "tier": "base",
+      "featured": true,
+      "total": 100000,
+      "icon": "🎒",
+      "image": "/photos/prize_backpack.jpg",
+      "note": "While supplies last",
+      "weight": 2,
+      "_sponsor": "Unilumin"
     },
     {
       "id": "base1",
-      "name": "SnapPro Sticker Pack",
+      "name": "Unilumin Leather Notebook",
       "tier": "base",
       "total": 100000,
-      "icon": "✨",
-      "weight": 3
+      "icon": "📓",
+      "weight": 3,
+      "_sponsor": "Unilumin"
     },
     {
       "id": "base2",
-      "name": "SnapPro Marker",
+      "name": "Unilumin Pen",
       "tier": "base",
       "total": 100000,
       "icon": "🖊️",
-      "weight": 2
+      "weight": 3,
+      "_sponsor": "Unilumin"
     },
     {
       "id": "base3",
-      "name": "SnapPro Tote Bag",
-      "tier": "base",
-      "total": 100000,
-      "icon": "👜",
-      "weight": 1
-    },
-    {
-      "id": "base4",
-      "name": "$100 Off a Consultation",
+      "name": "$100 Off a SnapPro Consultation",
       "tier": "base",
       "total": 100000,
       "icon": "🎟️",
-      "weight": 2
+      "weight": 2,
+      "_sponsor": "SnapPro"
     }
   ],
   "quiz": [

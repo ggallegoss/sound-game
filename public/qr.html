@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>SnapPro · Game QR (offline)</title>
+    <script src="/qrcode.min.js"></script>
+    <style>
+      * { box-sizing: border-box; }
+      body { margin: 0; background: #0A0240; color: #fff; font-family: system-ui, sans-serif; padding: 28px 18px; text-align: center; }
+      h1 { font-size: 20px; margin: 0 0 4px; }
+      .sub { color: rgba(255,255,255,.6); font-size: 13px; margin-bottom: 20px; }
+      .card { background: #fff; display: inline-block; padding: 24px; border-radius: 18px; }
+      #qr { width: 320px; height: 320px; }
+      #qr img, #qr canvas { width: 320px !important; height: 320px !important; }
+      .url { margin: 16px 0 4px; font-size: 16px; font-weight: 700; word-break: break-all; }
+      .row { max-width: 460px; margin: 18px auto 0; display: flex; gap: 8px; }
+      input { flex: 1; padding: 11px 12px; border-radius: 10px; border: 1px solid rgba(255,255,255,.25); background: rgba(255,255,255,.08); color: #fff; font-size: 14px; }
+      button { padding: 11px 16px; border: 0; border-radius: 10px; background: linear-gradient(90deg,#00b8ff,#7933f5); color: #fff; font-weight: 700; cursor: pointer; }
+      .hint { color: rgba(255,255,255,.55); font-size: 12px; max-width: 460px; margin: 14px auto 0; line-height: 1.5; }
+      @media print {
+        body { background: #fff; color: #000; }
+        .row, .hint, .sub, button { display: none; }
+        .card { border: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Scan to play — SnapPro Sound in Film</h1>
+    <div class="sub">Works fully offline. Print this page for the booth poster.</div>
+    <div class="card"><div id="qr"></div></div>
+    <div class="url" id="urlText"></div>
+    <div class="row">
+      <input id="url" placeholder="http://192.168.x.x:3000/" />
+      <button id="make">Update</button>
+      <button onclick="window.print()">Print</button>
+    </div>
+    <div class="hint">
+      Open this page <b>on the booth laptop using its network address</b> (e.g. http://192.168.x.x:3000/qr) — not localhost —
+      so the QR points to the address attendees' phones can reach. Find the laptop's address by running <b>ipconfig</b> (IPv4 Address).
+    </div>
+    <script>
+      var box = document.getElementById("qr");
+      var qr = null;
+      function render(u) {
+        box.innerHTML = "";
+        qr = new QRCode(box, { text: u, width: 320, height: 320, correctLevel: QRCode.CorrectLevel.M });
+        document.getElementById("urlText").textContent = u;
+        document.getElementById("url").value = u;
+      }
+      // Default: this server's own origin. If opened via the LAN IP, that's exactly
+      // the address phones need. If opened via localhost, edit the box to the LAN IP.
+      render(location.origin + "/");
+      document.getElementById("make").onclick = function () {
+        var u = document.getElementById("url").value.trim();
+        if (u) render(u);
+      };
+    </script>
+  </body>
+</html>

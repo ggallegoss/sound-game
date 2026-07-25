@@ -9,3 +9,6 @@ cf.live
 cf.out
 LIVE-URL.txt
 SnapPro-LIVE-QR.png
+
+# review candidates (not needed on server)
+public/photos/review/
