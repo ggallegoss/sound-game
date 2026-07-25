@@ -88,9 +88,20 @@ const prizeById = (id) => state.prizes.find((p) => p.id === id);
 // Curator framing: per-image pan/zoom + logo size (edited in /curator)
 // ---------------------------------------------------------------------------
 const FRAMING_FILE = join(DATA_DIR, "framing.json");
-let framing = existsSync(FRAMING_FILE)
-  ? JSON.parse(readFileSync(FRAMING_FILE, "utf8"))
-  : { images: {}, logo: { size: 50 } };
+// framing.json is tuned in /curator and SHIPS in the repo (data/framing.json).
+// When DATA_DIR points at a fresh persistent disk (e.g. Render), the disk copy
+// won't exist yet — fall back to the bundled repo copy so crops + logo size
+// still apply. Curator saves write to the disk copy (which then wins).
+const BUNDLED_FRAMING = join(__dirname, "data", "framing.json");
+function loadFraming() {
+  for (const f of [FRAMING_FILE, BUNDLED_FRAMING]) {
+    if (existsSync(f)) {
+      try { return JSON.parse(readFileSync(f, "utf8")); } catch {}
+    }
+  }
+  return { images: {}, logo: { size: 50 } };
+}
+let framing = loadFraming();
 function saveFraming() {
   writeFileSync(FRAMING_FILE, JSON.stringify(framing, null, 2));
 }
